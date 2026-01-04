@@ -32,6 +32,8 @@
             this.timeWindowTrackBar = new System.Windows.Forms.TrackBar();
             this.timeWindowValueLabel = new System.Windows.Forms.Label();
             this.clearButton = new System.Windows.Forms.Button();
+            this.displayModeLabel = new System.Windows.Forms.Label();
+            this.displayModeComboBox = new System.Windows.Forms.ComboBox();
             this.controlPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.timeWindowTrackBar)).BeginInit();
             this.SuspendLayout();
@@ -42,21 +44,23 @@
             this.waveformPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.waveformPanel.Location = new System.Drawing.Point(0, 0);
             this.waveformPanel.Name = "waveformPanel";
-            this.waveformPanel.Size = new System.Drawing.Size(400, 260);
+            this.waveformPanel.Size = new System.Drawing.Size(400, 230);
             this.waveformPanel.TabIndex = 0;
             this.waveformPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.waveformPanel_Paint);
             // 
             // controlPanel
             // 
             this.controlPanel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.controlPanel.Controls.Add(this.displayModeComboBox);
+            this.controlPanel.Controls.Add(this.displayModeLabel);
             this.controlPanel.Controls.Add(this.clearButton);
             this.controlPanel.Controls.Add(this.timeWindowValueLabel);
             this.controlPanel.Controls.Add(this.timeWindowTrackBar);
             this.controlPanel.Controls.Add(this.timeWindowLabel);
             this.controlPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.controlPanel.Location = new System.Drawing.Point(0, 260);
+            this.controlPanel.Location = new System.Drawing.Point(0, 230);
             this.controlPanel.Name = "controlPanel";
-            this.controlPanel.Size = new System.Drawing.Size(400, 40);
+            this.controlPanel.Size = new System.Drawing.Size(400, 70);
             this.controlPanel.TabIndex = 1;
             // 
             // timeWindowLabel
@@ -101,6 +105,31 @@
             this.clearButton.UseVisualStyleBackColor = true;
             this.clearButton.Click += new System.EventHandler(this.clearButton_Click);
             // 
+            // displayModeLabel
+            // 
+            this.displayModeLabel.AutoSize = true;
+            this.displayModeLabel.ForeColor = System.Drawing.Color.White;
+            this.displayModeLabel.Location = new System.Drawing.Point(5, 42);
+            this.displayModeLabel.Name = "displayModeLabel";
+            this.displayModeLabel.Size = new System.Drawing.Size(82, 15);
+            this.displayModeLabel.TabIndex = 4;
+            this.displayModeLabel.Text = "Display Mode:";
+            // 
+            // displayModeComboBox
+            // 
+            this.displayModeComboBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.displayModeComboBox.FormattingEnabled = true;
+            this.displayModeComboBox.Items.AddRange(new object[] {
+            "I Component (Carrier)",
+            "Q Component (Carrier)",
+            "Envelope (Magnitude)",
+            "Both I & Q"});
+            this.displayModeComboBox.Location = new System.Drawing.Point(90, 39);
+            this.displayModeComboBox.Name = "displayModeComboBox";
+            this.displayModeComboBox.Size = new System.Drawing.Size(150, 23);
+            this.displayModeComboBox.TabIndex = 5;
+            this.displayModeComboBox.SelectedIndexChanged += new System.EventHandler(this.displayModeComboBox_SelectedIndexChanged);
+            // 
             // ControlPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -123,5 +152,7 @@
         private System.Windows.Forms.TrackBar timeWindowTrackBar;
         private System.Windows.Forms.Label timeWindowValueLabel;
         private System.Windows.Forms.Button clearButton;
+        private System.Windows.Forms.Label displayModeLabel;
+        private System.Windows.Forms.ComboBox displayModeComboBox;
     }
 }

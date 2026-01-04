@@ -30,6 +30,9 @@ namespace SDRSharp.TimeDomainScope
             _processor = processor;
             InitializeComponent();
 
+            // Set default display mode
+            displayModeComboBox.SelectedIndex = 0; // I Component
+
             // Add mouse event handlers for zoom and pan
             waveformPanel.MouseWheel += WaveformPanel_MouseWheel;
             waveformPanel.MouseDown += WaveformPanel_MouseDown;
@@ -41,6 +44,26 @@ namespace SDRSharp.TimeDomainScope
             _refreshTimer.Interval = 50; // 20 FPS
             _refreshTimer.Tick += RefreshTimer_Tick;
             _refreshTimer.Start();
+        }
+
+        private void displayModeComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            switch (displayModeComboBox.SelectedIndex)
+            {
+                case 0:
+                    _processor.Mode = DisplayMode.IComponent;
+                    break;
+                case 1:
+                    _processor.Mode = DisplayMode.QComponent;
+                    break;
+                case 2:
+                    _processor.Mode = DisplayMode.Envelope;
+                    break;
+                case 3:
+                    _processor.Mode = DisplayMode.Both;
+                    break;
+            }
+            waveformPanel.Invalidate();
         }
 
         private void WaveformPanel_MouseWheel(object sender, MouseEventArgs e)
@@ -308,14 +331,18 @@ namespace SDRSharp.TimeDomainScope
         }
 
         private void DrawWaveform(Graphics g, int plotX, int plotY, int plotWidth, int plotHeight,
-            float[] waveformBuffer, float maxValue)
+    float[] waveformBuffer, float maxValue)
         {
-            // Set clipping region to plot area
             g.SetClip(new Rectangle(plotX, plotY, plotWidth, plotHeight));
 
-            using (Pen waveformPen = new Pen(Color.Lime, 2))
+            // For I/Q display, we need to handle positive and negative values differently
+            bool isBipolar = (_processor.Mode == DisplayMode.IComponent ||
+                              _processor.Mode == DisplayMode.QComponent ||
+                              _processor.Mode == DisplayMode.Both);
+
+            using (Pen iPen = new Pen(Color.Lime, 2))
+            using (Pen qPen = new Pen(Color.Cyan, 2))
             {
-                // Calculate visible sample range
                 float visibleStart = _panOffset / _zoomLevel;
                 float visibleEnd = visibleStart + (1.0f / _zoomLevel);
 
@@ -329,7 +356,9 @@ namespace SDRSharp.TimeDomainScope
                 if (visibleSamples <= 0) return;
 
                 int samplesPerPixel = Math.Max(1, visibleSamples / plotWidth);
+                int centerY = plotY + plotHeight / 2;
 
+                // Draw I component
                 for (int x = 0; x < plotWidth - 1; x++)
                 {
                     int sampleIndex = startSample + (x * samplesPerPixel);
@@ -339,22 +368,66 @@ namespace SDRSharp.TimeDomainScope
                     float sample1 = waveformBuffer[sampleIndex];
                     float sample2 = waveformBuffer[Math.Min(sampleIndex + samplesPerPixel, endSample - 1)];
 
-                    float normalized1 = maxValue > 0 ? sample1 / maxValue : 0;
-                    float normalized2 = maxValue > 0 ? sample2 / maxValue : 0;
+                    int y1, y2;
 
-                    normalized1 = Math.Min(1.0f, Math.Max(0f, normalized1));
-                    normalized2 = Math.Min(1.0f, Math.Max(0f, normalized2));
+                    if (isBipolar)
+                    {
+                        // Bipolar: center line is zero, positive up, negative down
+                        float normalized1 = maxValue > 0 ? sample1 / maxValue : 0;
+                        float normalized2 = maxValue > 0 ? sample2 / maxValue : 0;
 
-                    int y1 = plotY + plotHeight - (int)(normalized1 * plotHeight);
-                    int y2 = plotY + plotHeight - (int)(normalized2 * plotHeight);
+                        normalized1 = Math.Max(-1.0f, Math.Min(1.0f, normalized1));
+                        normalized2 = Math.Max(-1.0f, Math.Min(1.0f, normalized2));
 
-                    g.DrawLine(waveformPen, plotX + x, y1, plotX + x + 1, y2);
+                        y1 = centerY - (int)(normalized1 * (plotHeight / 2) * 0.9f);
+                        y2 = centerY - (int)(normalized2 * (plotHeight / 2) * 0.9f);
+                    }
+                    else
+                    {
+                        // Unipolar (envelope): bottom is zero, top is max
+                        float normalized1 = maxValue > 0 ? sample1 / maxValue : 0;
+                        float normalized2 = maxValue > 0 ? sample2 / maxValue : 0;
+
+                        normalized1 = Math.Min(1.0f, Math.Max(0f, normalized1));
+                        normalized2 = Math.Min(1.0f, Math.Max(0f, normalized2));
+
+                        y1 = plotY + plotHeight - (int)(normalized1 * plotHeight);
+                        y2 = plotY + plotHeight - (int)(normalized2 * plotHeight);
+                    }
+
+                    g.DrawLine(iPen, plotX + x, y1, plotX + x + 1, y2);
+                }
+
+                // Draw Q component if Both mode
+                if (_processor.Mode == DisplayMode.Both)
+                {
+                    float[] qBuffer = _processor.GetQBuffer();
+                    if (qBuffer != null && qBuffer.Length > 0)
+                    {
+                        for (int x = 0; x < plotWidth - 1; x++)
+                        {
+                            int sampleIndex = startSample + (x * samplesPerPixel);
+                            if (sampleIndex >= endSample - 1 || sampleIndex >= qBuffer.Length - 1)
+                                break;
+
+                            float sample1 = qBuffer[sampleIndex];
+                            float sample2 = qBuffer[Math.Min(sampleIndex + samplesPerPixel, Math.Min(endSample - 1, qBuffer.Length - 1))];
+
+                            float normalized1 = maxValue > 0 ? sample1 / maxValue : 0;
+                            float normalized2 = maxValue > 0 ? sample2 / maxValue : 0;
+
+                            normalized1 = Math.Max(-1.0f, Math.Min(1.0f, normalized1));
+                            normalized2 = Math.Max(-1.0f, Math.Min(1.0f, normalized2));
+
+                            int y1 = centerY - (int)(normalized1 * (plotHeight / 2) * 0.9f);
+                            int y2 = centerY - (int)(normalized2 * (plotHeight / 2) * 0.9f);
+
+                            g.DrawLine(qPen, plotX + x, y1, plotX + x + 1, y2);
+                        }
+                    }
                 }
             }
 
-
-
-            // Reset clipping
             g.ResetClip();
         }
 
