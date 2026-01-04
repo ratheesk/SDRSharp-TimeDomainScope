@@ -2,6 +2,8 @@
 
 A real-time time domain oscilloscope plugin for SDRSharp that visualizes signal waveforms with interactive zoom and pan capabilities.
 
+![Frozen Display](screenshots/screenshot-frozen.png)
+
 ## Features
 
 - Real-time waveform visualization
@@ -190,10 +192,6 @@ The plugin can visualize:
 - Use Envelope mode for fastest performance
 - Raw IQ mode requires more processing power
 - Close other plugins if experiencing lag
-
-## License
-
-MIT License
 
 ## Author
 
