@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Freeze button to pause and capture live display
+- Save snapshot functionality with PNG, JPG, and BMP export
+- Timestamp overlay on captured images
+- Auto-generated filenames with datetime stamps
 - Multiple display modes: I Component, Q Component, Envelope, Both I&Q
 - Adjustable time window control (10ms to 200ms)
 - Clear buffer button
