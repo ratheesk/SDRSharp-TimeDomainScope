@@ -352,8 +352,32 @@ namespace SDRSharp.TimeDomainScope
                 }
             }
 
+
+
             // Reset clipping
             g.ResetClip();
+        }
+
+        private void timeWindowTrackBar_Scroll(object sender, EventArgs e)
+        {
+            // Update buffer size based on trackbar value (10ms to 200ms)
+            int timeWindowMs = timeWindowTrackBar.Value;
+            timeWindowValueLabel.Text = timeWindowMs + " ms";
+
+            // Calculate buffer size based on sample rate
+            // Assuming typical IQ sample rate of 250 kHz (adjust if needed)
+            double sampleRate = _processor.SampleRate;
+            if (sampleRate == 0)
+                sampleRate = 250000; // Default assumption
+
+            int bufferSize = (int)(sampleRate * timeWindowMs / 1000.0);
+            _processor.BufferSize = bufferSize;
+        }
+
+        private void clearButton_Click(object sender, EventArgs e)
+        {
+            _processor.ClearBuffer();
+            waveformPanel.Invalidate();
         }
     }
 }
