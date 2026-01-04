@@ -16,16 +16,110 @@ namespace SDRSharp.TimeDomainScope
         private const int TOP_MARGIN = 30;
         private const int BOTTOM_MARGIN = 40;
 
+        // Zoom and Pan variables
+        private float _zoomLevel = 1.0f;
+        private float _panOffset = 0.0f;
+        private bool _isPanning = false;
+        private Point _lastMousePos;
+        private const float MIN_ZOOM = 1.0f;
+        private const float MAX_ZOOM = 100.0f;
+
         public ControlPanel(ISharpControl control, TimeDomainProcessor processor)
         {
             _control = control;
             _processor = processor;
             InitializeComponent();
 
+            // Add mouse event handlers for zoom and pan
+            waveformPanel.MouseWheel += WaveformPanel_MouseWheel;
+            waveformPanel.MouseDown += WaveformPanel_MouseDown;
+            waveformPanel.MouseMove += WaveformPanel_MouseMove;
+            waveformPanel.MouseUp += WaveformPanel_MouseUp;
+            waveformPanel.MouseDoubleClick += WaveformPanel_MouseDoubleClick;
+
             _refreshTimer = new Timer();
             _refreshTimer.Interval = 50; // 20 FPS
             _refreshTimer.Tick += RefreshTimer_Tick;
             _refreshTimer.Start();
+        }
+
+        private void WaveformPanel_MouseWheel(object sender, MouseEventArgs e)
+        {
+            // Zoom in/out with mouse wheel
+            float zoomFactor = e.Delta > 0 ? 1.2f : 0.8f;
+            float newZoom = _zoomLevel * zoomFactor;
+
+            // Clamp zoom level
+            newZoom = Math.Max(MIN_ZOOM, Math.Min(MAX_ZOOM, newZoom));
+
+            // Adjust pan offset to zoom towards mouse position
+            if (newZoom != _zoomLevel)
+            {
+                int plotWidth = waveformPanel.Width - LEFT_MARGIN - RIGHT_MARGIN;
+                float mouseRelativePos = (float)(e.X - LEFT_MARGIN) / plotWidth;
+
+                _panOffset = _panOffset * (newZoom / _zoomLevel);
+                _zoomLevel = newZoom;
+
+                // Clamp pan offset
+                ClampPanOffset();
+            }
+
+            waveformPanel.Invalidate();
+        }
+
+        private void WaveformPanel_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                _isPanning = true;
+                _lastMousePos = e.Location;
+                waveformPanel.Cursor = Cursors.Hand;
+            }
+        }
+
+        private void WaveformPanel_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (_isPanning)
+            {
+                int plotWidth = waveformPanel.Width - LEFT_MARGIN - RIGHT_MARGIN;
+                float dx = e.X - _lastMousePos.X;
+
+                // Pan offset in normalized coordinates
+                _panOffset -= (dx / plotWidth) * _zoomLevel;
+
+                ClampPanOffset();
+
+                _lastMousePos = e.Location;
+                waveformPanel.Invalidate();
+            }
+        }
+
+        private void WaveformPanel_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                _isPanning = false;
+                waveformPanel.Cursor = Cursors.Default;
+            }
+        }
+
+        private void WaveformPanel_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            // Reset zoom and pan on double-click
+            if (e.Button == MouseButtons.Left)
+            {
+                _zoomLevel = 1.0f;
+                _panOffset = 0.0f;
+                waveformPanel.Invalidate();
+            }
+        }
+
+        private void ClampPanOffset()
+        {
+            // Prevent panning beyond the signal bounds
+            float maxOffset = _zoomLevel - 1.0f;
+            _panOffset = Math.Max(0, Math.Min(maxOffset, _panOffset));
         }
 
         private void RefreshTimer_Tick(object sender, EventArgs e)
@@ -80,14 +174,23 @@ namespace SDRSharp.TimeDomainScope
                 return;
             }
 
-            // Draw waveform
+            // Draw waveform with zoom and pan
             DrawWaveform(g, plotX, plotY, plotWidth, plotHeight, waveformBuffer, maxValue);
 
-            // Draw title
+            // Draw title and zoom info
             using (Font titleFont = new Font("Arial", 10, FontStyle.Bold))
             using (Brush brush = new SolidBrush(Color.White))
             {
                 g.DrawString("Time Domain Signal", titleFont, brush, plotX, 5);
+
+                // Show zoom level
+                string zoomInfo = $"Zoom: {_zoomLevel:F1}x";
+                if (_zoomLevel > 1.0f)
+                {
+                    zoomInfo += " (Double-click to reset)";
+                }
+                SizeF infoSize = g.MeasureString(zoomInfo, titleFont);
+                g.DrawString(zoomInfo, titleFont, brush, width - infoSize.Width - 10, 5);
             }
         }
 
@@ -130,9 +233,8 @@ namespace SDRSharp.TimeDomainScope
                     int y = plotY + (plotHeight * i) / 10;
                     g.DrawLine(tickPen, plotX - 5, y, plotX, y);
 
-                    // Calculate amplitude value (inverted because high signal is at top)
                     float amplitude = maxValue * (10 - i) / 10.0f;
-                    string label = amplitude.ToString("E2"); // Scientific notation
+                    string label = amplitude.ToString("E2");
 
                     SizeF labelSize = g.MeasureString(label, labelFont);
                     g.DrawString(label, labelFont, labelBrush,
@@ -146,7 +248,6 @@ namespace SDRSharp.TimeDomainScope
                     string yLabel = "Amplitude";
                     SizeF labelSize = g.MeasureString(yLabel, axisFont);
 
-                    // Rotate and draw vertical label
                     g.TranslateTransform(15, plotY + plotHeight / 2 + labelSize.Width / 2);
                     g.RotateTransform(-90);
                     g.DrawString(yLabel, axisFont, labelBrush, 0, 0);
@@ -156,17 +257,23 @@ namespace SDRSharp.TimeDomainScope
                 // X-axis (time)
                 g.DrawLine(axisPen, plotX, plotY + plotHeight, plotX + plotWidth, plotY + plotHeight);
 
-                // X-axis ticks and labels
+                // X-axis ticks and labels with zoom consideration
                 double sampleRate = _processor.SampleRate;
+                int totalSamples = sampleCount;
+
                 for (int i = 0; i <= 10; i++)
                 {
                     int x = plotX + (plotWidth * i) / 10;
                     g.DrawLine(tickPen, x, plotY + plotHeight, x, plotY + plotHeight + 5);
 
-                    // Calculate time value
-                    double timeSamples = (sampleCount * i) / 10.0;
-                    string label;
+                    // Calculate visible sample range based on zoom and pan
+                    float visibleStart = _panOffset / _zoomLevel;
+                    float visibleEnd = visibleStart + (1.0f / _zoomLevel);
 
+                    float samplePos = visibleStart + ((visibleEnd - visibleStart) * i / 10.0f);
+                    double timeSamples = totalSamples * samplePos;
+
+                    string label;
                     if (sampleRate > 0)
                     {
                         double timeMs = (timeSamples / sampleRate) * 1000.0;
@@ -203,35 +310,50 @@ namespace SDRSharp.TimeDomainScope
         private void DrawWaveform(Graphics g, int plotX, int plotY, int plotWidth, int plotHeight,
             float[] waveformBuffer, float maxValue)
         {
+            // Set clipping region to plot area
+            g.SetClip(new Rectangle(plotX, plotY, plotWidth, plotHeight));
+
             using (Pen waveformPen = new Pen(Color.Lime, 2))
             {
-                int samplesPerPixel = Math.Max(1, waveformBuffer.Length / plotWidth);
+                // Calculate visible sample range
+                float visibleStart = _panOffset / _zoomLevel;
+                float visibleEnd = visibleStart + (1.0f / _zoomLevel);
+
+                int startSample = (int)(visibleStart * waveformBuffer.Length);
+                int endSample = (int)(visibleEnd * waveformBuffer.Length);
+
+                startSample = Math.Max(0, startSample);
+                endSample = Math.Min(waveformBuffer.Length - 1, endSample);
+
+                int visibleSamples = endSample - startSample;
+                if (visibleSamples <= 0) return;
+
+                int samplesPerPixel = Math.Max(1, visibleSamples / plotWidth);
 
                 for (int x = 0; x < plotWidth - 1; x++)
                 {
-                    int sampleIndex = x * samplesPerPixel;
-                    if (sampleIndex >= waveformBuffer.Length - 1)
+                    int sampleIndex = startSample + (x * samplesPerPixel);
+                    if (sampleIndex >= endSample - 1)
                         break;
 
-                    // Get samples
                     float sample1 = waveformBuffer[sampleIndex];
-                    float sample2 = waveformBuffer[Math.Min(sampleIndex + samplesPerPixel, waveformBuffer.Length - 1)];
+                    float sample2 = waveformBuffer[Math.Min(sampleIndex + samplesPerPixel, endSample - 1)];
 
-                    // Normalize using auto-scale
                     float normalized1 = maxValue > 0 ? sample1 / maxValue : 0;
                     float normalized2 = maxValue > 0 ? sample2 / maxValue : 0;
 
-                    // Clamp
                     normalized1 = Math.Min(1.0f, Math.Max(0f, normalized1));
                     normalized2 = Math.Min(1.0f, Math.Max(0f, normalized2));
 
-                    // Map to screen (inverted - high signal at top)
                     int y1 = plotY + plotHeight - (int)(normalized1 * plotHeight);
                     int y2 = plotY + plotHeight - (int)(normalized2 * plotHeight);
 
                     g.DrawLine(waveformPen, plotX + x, y1, plotX + x + 1, y2);
                 }
             }
+
+            // Reset clipping
+            g.ResetClip();
         }
     }
 }
