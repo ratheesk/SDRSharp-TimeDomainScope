@@ -14,6 +14,11 @@
                     _refreshTimer.Dispose();
                 }
 
+                if (_frozenImage != null)
+                {
+                    _frozenImage.Dispose();
+                }
+
                 if (components != null)
                 {
                     components.Dispose();
@@ -34,6 +39,8 @@
             this.clearButton = new System.Windows.Forms.Button();
             this.displayModeLabel = new System.Windows.Forms.Label();
             this.displayModeComboBox = new System.Windows.Forms.ComboBox();
+            this.freezeButton = new System.Windows.Forms.Button();
+            this.saveButton = new System.Windows.Forms.Button();
             this.controlPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.timeWindowTrackBar)).BeginInit();
             this.SuspendLayout();
@@ -51,6 +58,8 @@
             // controlPanel
             // 
             this.controlPanel.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
+            this.controlPanel.Controls.Add(this.saveButton);
+            this.controlPanel.Controls.Add(this.freezeButton);
             this.controlPanel.Controls.Add(this.displayModeComboBox);
             this.controlPanel.Controls.Add(this.displayModeLabel);
             this.controlPanel.Controls.Add(this.clearButton);
@@ -60,7 +69,7 @@
             this.controlPanel.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.controlPanel.Location = new System.Drawing.Point(0, 230);
             this.controlPanel.Name = "controlPanel";
-            this.controlPanel.Size = new System.Drawing.Size(400, 70);
+            this.controlPanel.Size = new System.Drawing.Size(500, 70);
             this.controlPanel.TabIndex = 1;
             // 
             // timeWindowLabel
@@ -79,7 +88,7 @@
             this.timeWindowTrackBar.Maximum = 200;
             this.timeWindowTrackBar.Minimum = 10;
             this.timeWindowTrackBar.Name = "timeWindowTrackBar";
-            this.timeWindowTrackBar.Size = new System.Drawing.Size(150, 45);
+            this.timeWindowTrackBar.Size = new System.Drawing.Size(120, 45);
             this.timeWindowTrackBar.TabIndex = 1;
             this.timeWindowTrackBar.TickFrequency = 10;
             this.timeWindowTrackBar.Value = 50;
@@ -89,7 +98,7 @@
             // 
             this.timeWindowValueLabel.AutoSize = true;
             this.timeWindowValueLabel.ForeColor = System.Drawing.Color.Lime;
-            this.timeWindowValueLabel.Location = new System.Drawing.Point(245, 12);
+            this.timeWindowValueLabel.Location = new System.Drawing.Point(215, 12);
             this.timeWindowValueLabel.Name = "timeWindowValueLabel";
             this.timeWindowValueLabel.Size = new System.Drawing.Size(40, 15);
             this.timeWindowValueLabel.TabIndex = 2;
@@ -97,9 +106,9 @@
             // 
             // clearButton
             // 
-            this.clearButton.Location = new System.Drawing.Point(310, 8);
+            this.clearButton.Location = new System.Drawing.Point(270, 8);
             this.clearButton.Name = "clearButton";
-            this.clearButton.Size = new System.Drawing.Size(75, 23);
+            this.clearButton.Size = new System.Drawing.Size(60, 23);
             this.clearButton.TabIndex = 3;
             this.clearButton.Text = "Clear";
             this.clearButton.UseVisualStyleBackColor = true;
@@ -130,6 +139,27 @@
             this.displayModeComboBox.TabIndex = 5;
             this.displayModeComboBox.SelectedIndexChanged += new System.EventHandler(this.displayModeComboBox_SelectedIndexChanged);
             // 
+            // freezeButton
+            // 
+            this.freezeButton.Location = new System.Drawing.Point(336, 8);
+            this.freezeButton.Name = "freezeButton";
+            this.freezeButton.Size = new System.Drawing.Size(70, 23);
+            this.freezeButton.TabIndex = 6;
+            this.freezeButton.Text = "Freeze";
+            this.freezeButton.UseVisualStyleBackColor = true;
+            this.freezeButton.Click += new System.EventHandler(this.freezeButton_Click);
+            // 
+            // saveButton
+            // 
+            this.saveButton.Enabled = false;
+            this.saveButton.Location = new System.Drawing.Point(412, 8);
+            this.saveButton.Name = "saveButton";
+            this.saveButton.Size = new System.Drawing.Size(80, 23);
+            this.saveButton.TabIndex = 7;
+            this.saveButton.Text = "Save Image";
+            this.saveButton.UseVisualStyleBackColor = true;
+            this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
+            // 
             // ControlPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -137,7 +167,7 @@
             this.Controls.Add(this.waveformPanel);
             this.Controls.Add(this.controlPanel);
             this.Name = "ControlPanel";
-            this.Size = new System.Drawing.Size(400, 300);
+            this.Size = new System.Drawing.Size(500, 300);
             this.controlPanel.ResumeLayout(false);
             this.controlPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.timeWindowTrackBar)).EndInit();
@@ -154,5 +184,7 @@
         private System.Windows.Forms.Button clearButton;
         private System.Windows.Forms.Label displayModeLabel;
         private System.Windows.Forms.ComboBox displayModeComboBox;
+        private System.Windows.Forms.Button freezeButton;
+        private System.Windows.Forms.Button saveButton;
     }
 }

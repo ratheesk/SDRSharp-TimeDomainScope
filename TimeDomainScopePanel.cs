@@ -24,6 +24,9 @@ namespace SDRSharp.TimeDomainScope
         private const float MIN_ZOOM = 1.0f;
         private const float MAX_ZOOM = 100.0f;
 
+        private bool _isFrozen = false;
+        private Bitmap _frozenImage = null;
+
         public ControlPanel(ISharpControl control, TimeDomainProcessor processor)
         {
             _control = control;
@@ -147,17 +150,31 @@ namespace SDRSharp.TimeDomainScope
 
         private void RefreshTimer_Tick(object sender, EventArgs e)
         {
-            waveformPanel.Invalidate();
+            // Don't update when frozen
+            if (!_isFrozen)
+            {
+                waveformPanel.Invalidate();
+            }
         }
 
         private void waveformPanel_Paint(object sender, PaintEventArgs e)
         {
-            Graphics g = e.Graphics;
+            if (_isFrozen && _frozenImage != null)
+            {
+                // Display frozen image
+                e.Graphics.DrawImage(_frozenImage, 0, 0);
+            }
+            else
+            {
+                // Render live waveform
+                RenderWaveform(e.Graphics, waveformPanel.Width, waveformPanel.Height);
+            }
+        }
+
+        private void RenderWaveform(Graphics g, int width, int height)
+        {
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-
-            int width = waveformPanel.Width;
-            int height = waveformPanel.Height;
 
             // Calculate plot area
             int plotX = LEFT_MARGIN;
@@ -205,6 +222,14 @@ namespace SDRSharp.TimeDomainScope
             using (Brush brush = new SolidBrush(Color.White))
             {
                 g.DrawString("Time Domain Signal", titleFont, brush, plotX, 5);
+
+                // Add timestamp when frozen
+                if (_isFrozen)
+                {
+                    string timestamp = $"Captured: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                    g.DrawString(timestamp, titleFont, new SolidBrush(Color.Yellow),
+                        plotX + 200, 5);
+                }
 
                 // Show zoom level
                 string zoomInfo = $"Zoom: {_zoomLevel:F1}x";
@@ -446,6 +471,109 @@ namespace SDRSharp.TimeDomainScope
             int bufferSize = (int)(sampleRate * timeWindowMs / 1000.0);
             _processor.BufferSize = bufferSize;
         }
+
+        private void freezeButton_Click(object sender, EventArgs e)
+        {
+            _isFrozen = !_isFrozen;
+
+            if (_isFrozen)
+            {
+                // Freeze the display
+                freezeButton.Text = "Unfreeze";
+                freezeButton.BackColor = Color.Orange;
+                saveButton.Enabled = true;
+
+                // Capture current display
+                CaptureWaveformImage();
+            }
+            else
+            {
+                // Unfreeze the display
+                freezeButton.Text = "Freeze";
+                freezeButton.BackColor = SystemColors.Control;
+                saveButton.Enabled = false;
+
+                // Clear frozen image
+                if (_frozenImage != null)
+                {
+                    _frozenImage.Dispose();
+                    _frozenImage = null;
+                }
+            }
+
+            waveformPanel.Invalidate();
+        }
+
+        private void saveButton_Click(object sender, EventArgs e)
+        {
+            if (_frozenImage == null)
+            {
+                MessageBox.Show("No frozen image to save. Please freeze the display first.",
+                    "No Image", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (SaveFileDialog saveDialog = new SaveFileDialog())
+            {
+                saveDialog.Filter = "PNG Image|*.png|JPEG Image|*.jpg|Bitmap Image|*.bmp";
+                saveDialog.Title = "Save Waveform Snapshot";
+                saveDialog.FileName = $"Waveform_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+                if (saveDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        // Determine format based on extension
+                        System.Drawing.Imaging.ImageFormat format = System.Drawing.Imaging.ImageFormat.Png;
+                        string extension = System.IO.Path.GetExtension(saveDialog.FileName).ToLower();
+
+                        switch (extension)
+                        {
+                            case ".jpg":
+                            case ".jpeg":
+                                format = System.Drawing.Imaging.ImageFormat.Jpeg;
+                                break;
+                            case ".bmp":
+                                format = System.Drawing.Imaging.ImageFormat.Bmp;
+                                break;
+                            default:
+                                format = System.Drawing.Imaging.ImageFormat.Png;
+                                break;
+                        }
+
+                        _frozenImage.Save(saveDialog.FileName, format);
+
+                        MessageBox.Show($"Waveform saved successfully to:\n{saveDialog.FileName}",
+                            "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Error saving image:\n{ex.Message}",
+                            "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void CaptureWaveformImage()
+        {
+            // Dispose old image if exists
+            if (_frozenImage != null)
+            {
+                _frozenImage.Dispose();
+            }
+
+            // Create a new bitmap with the size of the waveform panel
+            _frozenImage = new Bitmap(waveformPanel.Width, waveformPanel.Height);
+
+            using (Graphics g = Graphics.FromImage(_frozenImage))
+            {
+                // Render the waveform panel to the bitmap
+                RenderWaveform(g, waveformPanel.Width, waveformPanel.Height);
+            }
+        }
+
+        
 
         private void clearButton_Click(object sender, EventArgs e)
         {
