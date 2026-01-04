@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.2.0] - 2026-01-05
+
+### Added
 - Freeze button to pause and capture live display
 - Save snapshot functionality with PNG, JPG, and BMP export
 - Timestamp overlay on captured images
@@ -20,6 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive documentation on frequency downconversion
 - Display mode selector dropdown
 - Auto-scaling for different signal strengths
+- Mouse wheel zoom (1x to 100x)
+- Click-and-drag pan functionality
+- Double-click to reset zoom
 
 ### Changed
 - Improved buffer management with configurable size
@@ -34,8 +45,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auto-scaling amplitude detection
 - Professional axes with tick marks and labels
 - Grid overlay for better readability
-- Mouse wheel zoom (1x to 100x)
-- Click-and-drag pan functionality
-- Double-click to reset zoom
 - Envelope detection for OOK signals
 - Basic IQ processor implementation
